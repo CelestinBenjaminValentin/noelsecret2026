@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secret Santa 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one narrow column under a garland of golden baubles; one view at a time (inscriptions, tirage, organisateur).
+   One visual world, by choice: candle-lit gold on a dark warm night, fir branches at the edges, frosted cards. */
+:root{
+  --bg:#130d06; --surface:rgba(30,21,10,.74); --ink:#fbf3e2; --muted:#d2c09c; --line:rgba(236,198,110,.28);
+  --accent:#e9c46a; --accent-ink:#2a1a04; --pale:#f6e3ab; --soft:rgba(236,198,110,.10);
+  --field:rgba(10,6,2,.55); --danger:#ffab9e;
+  --display:"Cormorant Garamond","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+#deco{position:absolute;top:0;left:0;width:100%;height:150px;z-index:0;display:block;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:620px;margin:0 auto;padding:0 16px 40px;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--display);font-weight:700;font-size:3rem;line-height:1;margin:0;text-wrap:balance;letter-spacing:.01em;
+  color:var(--accent);background:linear-gradient(180deg,#fff1c2 0%,#e9c46a 48%,#b8862b 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 10px rgba(0,0,0,.6))}
+h2{font-family:var(--display);font-weight:700;font-size:1.55rem;line-height:1.15;margin:0;text-wrap:balance;color:var(--pale)}
+p{margin:0}
+.head{display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;padding:118px 0 4px}
+.rule{display:flex;align-items:center;gap:12px;width:min(260px,70%);color:var(--accent);font-size:.8rem}
+.rule::before,.rule::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--accent))}
+.rule::after{background:linear-gradient(90deg,var(--accent),transparent)}
+.facts{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-weight:600;font-size:.85rem;background:rgba(14,9,3,.72);border:1px solid var(--line);color:var(--pale)}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.fact{font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums;text-shadow:0 1px 8px rgba(0,0,0,.7)}
+.status{border-left:3px solid var(--accent);background:var(--surface);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);padding:10px 12px;border-radius:6px;font-size:.92rem}
+section{display:none;flex-direction:column;gap:14px}
+section.on{display:flex}
+.card{background:var(--surface);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 12px 34px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,236,180,.10);
+  border:1px solid var(--line);border-radius:16px;padding:18px 16px;display:flex;flex-direction:column;gap:12px}
+.muted{color:var(--muted);font-size:.92rem}
+label{font-weight:600;font-size:.88rem;display:flex;flex-direction:column;gap:4px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:9px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:76px}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px 18px;cursor:pointer;color:var(--accent-ink);
+  background:linear-gradient(180deg,#f6de96,#d7a73d);box-shadow:0 2px 10px rgba(233,196,106,.25)}
+button.quiet{background:transparent;color:var(--pale);border:1px solid var(--line);font-weight:600;box-shadow:none}
+button.small{padding:6px 10px;font-size:.82rem}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid #fff1c2;outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.row > label{flex:1 1 180px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.err{color:var(--danger);font-weight:600;font-size:.9rem}
+.err:empty,.ok:empty{display:none}
+.ok{color:var(--pale);font-weight:600;font-size:.92rem}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.people li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.people li:first-child{border-top:0}
+.people .name{flex:1;font-weight:600;overflow-wrap:anywhere}
+.via{font-weight:400;color:var(--muted);font-size:.88rem}
+.chip{font-size:.78rem;font-weight:600;color:var(--muted);background:var(--soft);border-radius:999px;padding:2px 9px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip.has{color:var(--pale)}
+#joinRows,#wishRows{display:flex;flex-direction:column;gap:12px}
+.wish{border-top:1px dashed var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.wish:first-of-type{border-top:0;padding-top:0}
+.num{font-family:var(--display);font-weight:700;color:var(--accent);font-size:1.12rem;letter-spacing:.02em}
+.reveal{border:1px solid var(--accent);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;background:rgba(233,196,106,.06)}
+.reveal .who{font-family:var(--display);font-weight:700;font-size:2.4rem;line-height:1.05;overflow-wrap:anywhere;color:var(--pale)}
+.note{border-left:2px solid var(--accent);padding:2px 0 2px 12px;font-style:italic;white-space:pre-wrap;overflow-wrap:anywhere}
+.gifts{align-self:stretch}
+.gifts li{padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere}
+.gifts a{color:var(--accent);font-weight:600}
+.foot{display:flex;gap:6px 20px;justify-content:center;flex-wrap:wrap;padding-top:6px}
+.foot a{color:var(--muted);font-size:.8rem;opacity:.8;text-decoration:underline;text-underline-offset:3px}
+@media (prefers-reduced-motion:no-preference){ .reveal .who{animation:pop .35s ease-out} }
+@keyframes pop{from{transform:scale(.92)}to{transform:scale(1)}}
+@media (max-width:380px){ h1{font-size:2.5rem} }
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<canvas id="deco" aria-hidden="true"></canvas>
+<div class="wrap">
+  <header class="head">
+    <h1>Secret Santa 2026</h1>
+    <div class="rule" aria-hidden="true">✦</div>
+    <div class="facts">
+      <span class="pill" id="phase">Inscriptions ouvertes</span>
+      <span class="fact" id="count">0 inscrit</span>
+      <span class="fact" id="factBudget" hidden></span>
+      <span class="fact" id="factDate" hidden></span>
+    </div>
+  </header>
+
+  <div class="status" id="status" role="status">Chargement des inscriptions…</div>
+
+  <section id="v-inscriptions">
+    <form class="card" id="joinForm" novalidate hidden>
+      <h2>Je m'inscris</h2>
+      <p class="muted">Un seul formulaire à remplir. Les idées de cadeaux sont facultatives : vous pourrez revenir les compléter. Après le tirage au sort, cette même page vous dira à qui vous offrez un cadeau.</p>
+      <span class="num">Étape 1 · Qui êtes-vous ?</span>
+      <label for="joinName">Mon prénom
+        <input id="joinName" maxlength="40" autocomplete="off" placeholder="Camille">
+      </label>
+      <label for="joinPin">Mon code secret (4 à 8 chiffres, à retenir)
+        <input id="joinPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
+      </label>
+      <p class="muted">Ce code vous sera demandé pour modifier vos idées et pour découvrir votre tirage. Personne ne peut le retrouver à votre place : notez-le.</p>
+      <span class="num">Étape 2 · Mes idées de cadeaux</span>
+      <div id="joinRows"></div>
+      <span class="num">Étape 3 · Un mot en plus</span>
+      <label for="joinNote">Commentaire libre (facultatif)
+        <textarea id="joinNote" maxlength="300" placeholder="Mes goûts, ma taille, ce que j'ai déjà, ce qu'il vaut mieux éviter…"></textarea>
+      </label>
+      <p class="err" id="joinErr"></p>
+      <div class="row"><button type="submit" id="joinBtn">Je m'inscris</button></div>
+    </form>
+    <div class="card" id="closedCard" hidden>
+      <h2>Inscriptions closes</h2>
+      <p class="muted">Le tirage est fait. Vous pouvez encore compléter vos idées ci-dessous ; la personne qui vous a tiré au sort verra les changements.</p>
+    </div>
+
+    <div class="card" id="editCard" hidden>
+      <h2>Modifier ou compléter mes idées</h2>
+      <form class="stack" id="unlock1" novalidate>
+        <label for="u1Sel">Je suis
+          <select id="u1Sel"></select>
+        </label>
+        <label for="u1Pin">Mon code secret
+          <input id="u1Pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
+        </label>
+        <p class="err" id="u1Err"></p>
+        <div class="row"><button type="submit" class="quiet">Voir mes idées</button></div>
+      </form>
+      <form class="stack" id="wishForm" novalidate hidden>
+        <p class="ok" id="helloText"></p>
+        <p class="muted">Jusqu'à trois idées, avec un lien internet si vous en avez un. Elles seront montrées à la personne qui vous tirera au sort.</p>
+        <div id="wishRows"></div>
+        <label for="wishNote">Commentaire libre (facultatif)
+          <textarea id="wishNote" maxlength="300" placeholder="Mes goûts, ma taille, ce que j'ai déjà, ce qu'il vaut mieux éviter…"></textarea>
+        </label>
+        <p class="err" id="wishErr"></p>
+        <div class="row">
+          <button type="submit" id="wishBtn">Enregistrer mes idées</button>
+          <button type="button" class="quiet" id="lockBtn1">Terminer</button>
+        </div>
+        <p class="ok" id="wishOk" role="status"></p>
+        <div class="row"><button type="button" class="quiet small" id="leaveBtn">Me désinscrire</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Participants</h2>
+      <p class="muted" id="peopleEmpty" hidden>Personne n'est encore inscrit. Soyez le premier.</p>
+      <ul class="people" id="people"></ul>
+    </div>
+  </section>
+
+  <section id="v-tirage">
+    <div class="card" id="drawDone" hidden>
+      <h2>Le tirage est fait</h2>
+      <form class="stack" id="unlock2" novalidate>
+        <label for="u2Sel">Je suis
+          <select id="u2Sel"></select>
+        </label>
+        <label for="u2Pin">Mon code secret
+          <input id="u2Pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
+        </label>
+        <p class="err" id="u2Err"></p>
+        <div class="row"><button type="submit">Continuer</button></div>
+      </form>
+      <div class="reveal" id="reveal" hidden>
+        <p class="muted">Vérifiez que personne ne regarde par-dessus votre épaule.</p>
+        <button type="button" id="revealBtn">Découvrir à qui j'offre</button>
+        <div class="stack" id="revealBody" hidden>
+          <p class="muted" id="revealLead">Vous offrez un cadeau à</p>
+          <p class="who" id="who"></p>
+          <p class="note" id="toNote" hidden></p>
+          <p class="muted" id="giftsEmpty" hidden></p>
+          <ul class="gifts" id="gifts"></ul>
+        </div>
+        <button type="button" class="quiet small" id="lockBtn2">Masquer et verrouiller</button>
+      </div>
+    </div>
+
+  </section>
+
+  <section id="v-organisateur">
+    <div class="card" id="adminCard">
+      <h2>Espace organisateur</h2>
+      <form class="stack" id="adminSetup" novalidate hidden>
+        <p class="muted">Personne n'organise encore ce tirage. Si c'est vous, choisissez un code organisateur : il servira à lancer le tirage et ne pourra plus être changé.</p>
+        <label for="adminNew">Code organisateur (6 caractères minimum)
+          <input id="adminNew" type="password" autocomplete="off" maxlength="40">
+        </label>
+        <div class="row"><button type="submit">Devenir l'organisateur</button></div>
+      </form>
+      <form class="row" id="adminLogin" novalidate hidden>
+        <label for="adminPin">Code organisateur
+          <input id="adminPin" type="password" autocomplete="off" maxlength="40">
+        </label>
+        <button type="submit" class="quiet">Ouvrir</button>
+      </form>
+      <p class="err" id="adminErr"></p>
+      <div class="stack" id="adminPanel" hidden>
+        <p class="muted" id="adminInfo"></p>
+        <form class="row" id="metaForm" novalidate>
+          <label for="budget">Budget conseillé
+            <input id="budget" maxlength="30" placeholder="20 €">
+          </label>
+          <label for="date">Date de l'échange
+            <input id="date" maxlength="40" placeholder="samedi 19 décembre">
+          </label>
+          <button type="submit" class="quiet">Enregistrer</button>
+        </form>
+        <div class="row"><button type="button" id="drawBtn">Clore les inscriptions et tirer au sort</button></div>
+        <div class="row"><button type="button" class="quiet small" id="resetBtn">Annuler le tirage et rouvrir les inscriptions</button></div>
+        <div class="row"><button type="button" class="quiet small" id="adminLock">Fermer l'espace organisateur</button></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <a href="#accueil" id="lnkHome" hidden>Retour</a>
+    <a href="#inscriptions" id="lnkEdit" hidden>Modifier mes idées de cadeaux</a>
+    <a href="#organisateur" id="lnkOrg" hidden>Espace organisateur</a>
+  </footer>
+</div>
+
+<script>
+/* Decor, drawn once per size from a fixed seed.
+   #bg (fixed): warm night, golden lights, fir branches, fine snowflakes and sparkles.
+   #deco (scrolls with the page): a garland of lights with hanging baubles. */
+(function(){
+  var seed=0;
+  function rnd(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed);
+    t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }
+  function fit(c){
+    var w=c.clientWidth||window.innerWidth, h=c.clientHeight||window.innerHeight, d=Math.min(window.devicePixelRatio||1,2);
+    c.width=Math.round(w*d); c.height=Math.round(h*d); var x=c.getContext("2d"); x.setTransform(d,0,0,d,0,0); return { x:x, w:w, h:h };
+  }
+  function glow(x,px,py,r,inner,outer){
+    var g=x.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,inner); g.addColorStop(1,outer);
+    x.fillStyle=g; x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill();
+  }
+  function sparkle(x,px,py,r,alpha){ /* four-point star */
+    x.save(); x.translate(px,py); x.fillStyle="rgba(255,236,180,"+alpha+")";
+    x.beginPath();
+    for(var i=0;i<8;i++){ var rr=i%2?r*0.22:r, a=i*Math.PI/4-Math.PI/2; x.lineTo(Math.cos(a)*rr, Math.sin(a)*rr); }
+    x.closePath(); x.fill(); x.restore();
+    glow(x,px,py,r*1.6,"rgba(255,226,150,"+alpha*0.35+")","rgba(255,226,150,0)");
+  }
+  function snowflake(x,px,py,r,alpha){
+    x.save(); x.translate(px,py); x.rotate(rnd()*1.05); x.strokeStyle="rgba(250,232,190,"+alpha+")"; x.lineWidth=1;
+    for(var i=0;i<6;i++){
+      x.rotate(Math.PI/3); x.beginPath(); x.moveTo(0,0); x.lineTo(0,-r);
+      x.moveTo(0,-r*0.55); x.lineTo(r*0.22,-r*0.78); x.moveTo(0,-r*0.55); x.lineTo(-r*0.22,-r*0.78); x.stroke();
+    }
+    x.restore();
+  }
+  function branch(x,px,py,ang,len,depth){
+    var n=Math.floor(len/5), dx=Math.cos(ang), dy=Math.sin(ang);
+    for(var i=0;i<n;i++){
+      var qx=px+dx*i*5, qy=py+dy*i*5, nl=(12+rnd()*12)*(1-i/n*0.45);
+      for(var s=-1;s<=1;s+=2){
+        var a=ang+s*(0.75+rnd()*0.3);
+        x.strokeStyle="rgba("+(38+rnd()*34|0)+","+(84+rnd()*52|0)+","+(48+rnd()*26|0)+","+(0.55+rnd()*0.35)+")";
+        x.beginPath(); x.moveTo(qx,qy); x.lineTo(qx+Math.cos(a)*nl, qy+Math.sin(a)*nl); x.stroke();
+      }
+      if(depth>0 && i>3 && i%9===4){ branch(x,qx,qy,ang+(rnd()<0.5?-1:1)*(0.45+rnd()*0.25),len*(0.5-i/n*0.25),depth-1); }
+    }
+    x.strokeStyle="rgba(120,90,44,.6)"; x.beginPath(); x.moveTo(px,py); x.lineTo(px+dx*len,py+dy*len); x.stroke();
+  }
+  function drawBg(){
+    var c=document.getElementById("bg"); if(!c||!c.getContext) return;
+    var f=fit(c), x=f.x, w=f.w, h=f.h, i, px, py, r; seed=20261225;
+    var g=x.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"#1d1408"); g.addColorStop(0.5,"#150e06"); g.addColorStop(1,"#0d0804");
+    x.fillStyle=g; x.fillRect(0,0,w,h);
+    glow(x,w*0.5,-h*0.05,Math.max(w,h)*0.75,"rgba(214,160,60,.30)","rgba(214,160,60,0)");
+    for(i=0;i<6;i++){ glow(x,rnd()*w,rnd()*h,(0.2+rnd()*0.3)*Math.max(w,h), i%2?"rgba(150,96,30,.20)":"rgba(90,60,22,.22)","rgba(0,0,0,0)"); }
+    x.lineWidth=1.3; x.lineCap="round";
+    var k=Math.max(2,Math.round(h/260));
+    for(i=0;i<k;i++){ branch(x, w+12, (i+0.35+rnd()*0.4)*h/k, Math.PI+(rnd()-0.35)*0.5, Math.min(w*0.5,140+rnd()*120), 2); }
+    for(i=0;i<Math.max(1,k-1);i++){ branch(x, -12, (i+0.75+rnd()*0.3)*h/k, (rnd()-0.4)*0.5, Math.min(w*0.4,110+rnd()*100), 2); }
+    for(i=0;i<Math.round(6+w*h/90000);i++){ snowflake(x, rnd()*w, rnd()*h, 7+rnd()*9, 0.10+rnd()*0.14); }
+    x.globalCompositeOperation="lighter";
+    var count=Math.round(Math.min(150, 45+w*h/10000));
+    for(i=0;i<count;i++){
+      px=rnd()*w; py=rnd()*h; r=rnd()<0.12 ? 12+rnd()*18 : 2+rnd()*7; var al=0.18+rnd()*0.45;
+      var rg=x.createRadialGradient(px,py,0,px,py,r);
+      rg.addColorStop(0,"rgba(255,232,165,"+al+")"); rg.addColorStop(0.55,"rgba(236,180,74,"+al*0.6+")"); rg.addColorStop(1,"rgba(230,160,40,0)");
+      x.fillStyle=rg; x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill();
+    }
+    x.globalCompositeOperation="source-over";
+    for(i=0;i<Math.round(8+w*h/70000);i++){ sparkle(x, rnd()*w, rnd()*h, 3+rnd()*5, 0.35+rnd()*0.45); }
+  }
+  function bauble(x,px,top,len,r,tone){
+    var cy=top+len+r, tones=[["#fff4cf","#ecc566","#8f6114"],["#fffaf0","#e8d7b0","#8c7648"],["#ffe9c0","#c98f3c","#5e3a0c"]], t=tones[tone%3];
+    x.strokeStyle="rgba(236,198,110,.8)"; x.lineWidth=1; x.beginPath(); x.moveTo(px,top); x.lineTo(px,cy-r-4); x.stroke();
+    glow(x,px,cy,r*1.9,"rgba(240,196,100,.22)","rgba(240,196,100,0)");
+    var g=x.createRadialGradient(px-r*0.38,cy-r*0.42,r*0.08,px,cy,r);
+    g.addColorStop(0,t[0]); g.addColorStop(0.45,t[1]); g.addColorStop(1,t[2]);
+    x.fillStyle=g; x.beginPath(); x.arc(px,cy,r,0,6.2832); x.fill();
+    x.save(); x.beginPath(); x.arc(px,cy,r,0,6.2832); x.clip(); /* engraved bands */
+    x.strokeStyle="rgba(255,244,210,.55)"; x.lineWidth=1;
+    x.beginPath(); x.ellipse(px,cy-r*0.9,r*1.25,r*0.95,0,0.25,Math.PI-0.25); x.stroke();
+    x.beginPath(); x.ellipse(px,cy-r*0.55,r*1.25,r*0.95,0,0.25,Math.PI-0.25); x.stroke();
+    x.restore();
+    x.fillStyle="#d8b25a"; x.fillRect(px-r*0.24,cy-r-5,r*0.48,6);
+    x.strokeStyle="#f3dc9c"; x.beginPath(); x.arc(px,cy-r-6,2.2,0,6.2832); x.stroke();
+  }
+  function drawDeco(){
+    var c=document.getElementById("deco"); if(!c||!c.getContext) return;
+    var f=fit(c), x=f.x, w=f.w, i, t; seed=1225; x.clearRect(0,0,w,f.h);
+    var n=Math.max(3,Math.round(w/190)), sw=w/n;
+    for(i=0;i<n;i++){
+      var x0=i*sw, x1=x0+sw, depth=30+rnd()*14, cx=x0+sw/2, cy=depth*2-6; /* quadratic control point */
+      x.strokeStyle="rgba(236,198,110,.75)"; x.lineWidth=1.2;
+      x.beginPath(); x.moveTo(x0,-2); x.quadraticCurveTo(cx,cy,x1,-2); x.stroke();
+      x.strokeStyle="rgba(236,198,110,.3)"; x.beginPath(); x.moveTo(x0,4); x.quadraticCurveTo(cx,cy+10,x1,4); x.stroke();
+      var m=Math.max(5,Math.round(sw/24));
+      for(var j=1;j<m;j++){
+        t=j/m; var bx=(1-t)*(1-t)*x0+2*(1-t)*t*cx+t*t*x1, by=(1-t)*(1-t)*-2+2*(1-t)*t*cy+t*t*-2;
+        glow(x,bx,by+3,7,"rgba(255,232,165,.55)","rgba(255,232,165,0)");
+        x.fillStyle="#fff1c2"; x.beginPath(); x.arc(bx,by+3,1.7,0,6.2832); x.fill();
+      }
+      sparkle(x, cx, depth+16, 7, 0.9);
+    }
+    for(i=1;i<n;i++){ bauble(x, i*sw, -2, 22+rnd()*34, 12+rnd()*7, i); }
+  }
+  function draw(){ drawBg(); drawDeco(); }
+  var to=null, lastW=0;
+  draw(); lastW=window.innerWidth;
+  window.addEventListener("resize", function(){
+    if(window.innerWidth===lastW) return; /* ignore the mobile address bar showing and hiding */
+    lastW=window.innerWidth; clearTimeout(to); to=setTimeout(draw,150);
+  });
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  var DB = "https://application-noel-secret-2026-default-rtdb.europe-west1.firebasedatabase.app/santa";
+  var $ = function(id){ return document.getElementById(id); };
+  var S = { people:[], state:{}, admin:null, draw:{}, loaded:false, session:null, isAdmin:false,
+            revealed:null, wishDirty:false, selSig:null, busy:false };
+  var VIEWS = ["inscriptions","tirage","organisateur"];
+
+  /* ---------- routing ----------
+     One view at a time. Before the draw the link opens the sign-up view; after it, the draw view.
+     The organiser view sits behind #organisateur; its footer link only shows on a device that has opened it once. */
+  function orgKnown(){ try{ return localStorage.getItem("santa-org")==="1"; }catch(_){ return false; } }
+  function rememberOrg(){ try{ localStorage.setItem("santa-org","1"); }catch(_){} }
+  function homeView(){ return S.state.phase==="drawn" ? "tirage" : "inscriptions"; }
+  function currentView(){
+    var h = location.hash.replace("#","");
+    if (h==="organisateur") return h;
+    if (S.state.phase==="drawn" && h==="inscriptions") return h;
+    return homeView();
+  }
+  function route(){
+    var v = currentView(), home = homeView();
+    VIEWS.forEach(function(n){ $("v-"+n).classList.toggle("on", n===v); });
+    $("lnkHome").hidden = (v===home);
+    $("lnkHome").textContent = home==="tirage" ? "Retour au tirage" : "Retour aux inscriptions";
+    $("lnkEdit").hidden = !(home==="tirage" && v==="tirage");
+    $("lnkOrg").hidden = v==="organisateur" || !(orgKnown() || S.isAdmin);
+  }
+  window.addEventListener("hashchange", function(){ route(); try{ window.scrollTo(0,0); }catch(_){} });
+
+  /* ---------- database (Firebase Realtime Database, REST) ---------- */
+  async function api(method, path, body){
+    var r = await fetch(DB + path + ".json", { method:method, body: body===undefined ? undefined : JSON.stringify(body) });
+    if(!r.ok){ var e = new Error("http "+r.status); e.denied = (r.status===401 || r.status===403); throw e; }
+    return r.json();
+  }
+
+  /*CRYPTO*/
+  /* Each participant gets a key pair. The private key is stored locked by their secret code;
+     the draw result is encrypted for their public key, so only their code opens it. */
+  var enc = new TextEncoder(), dec = new TextDecoder();
+  var ECDH = { name:"ECDH", namedCurve:"P-256" }, AES = { name:"AES-GCM", length:256 };
+  function b64(buf){ var b=new Uint8Array(buf), s=""; for(var i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+  function unb64(s){ var bin=atob(s), a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
+  function rid(){ var a=crypto.getRandomValues(new Uint8Array(9)), s=""; for(var i=0;i<a.length;i++) s+=(a[i]%36).toString(36); return s; }
+  function pbkdf(){ return { name:"PBKDF2", iterations:150000, hash:"SHA-256" }; }
+  async function codeKey(code, salt){
+    var km = await crypto.subtle.importKey("raw", enc.encode(code), "PBKDF2", false, ["deriveKey"]);
+    var p = pbkdf(); p.salt = enc.encode(salt);
+    return crypto.subtle.deriveKey(p, km, AES, false, ["encrypt","decrypt"]);
+  }
+  async function verifier(code, salt){
+    var km = await crypto.subtle.importKey("raw", enc.encode(code), "PBKDF2", false, ["deriveBits"]);
+    var p = pbkdf(); p.salt = enc.encode("admin:"+salt);
+    return b64(await crypto.subtle.deriveBits(p, km, 256));
+  }
+  async function makeIdentity(code){
+    var salt = rid();
+    var kp = await crypto.subtle.generateKey(ECDH, true, ["deriveKey"]);
+    var pub = await crypto.subtle.exportKey("jwk", kp.publicKey);
+    var priv = await crypto.subtle.exportKey("jwk", kp.privateKey);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = await crypto.subtle.encrypt({ name:"AES-GCM", iv:iv }, await codeKey(code, salt), enc.encode(JSON.stringify(priv)));
+    return { record:{ salt:salt, pub:JSON.stringify(pub), sk:{ iv:b64(iv), ct:b64(ct) } }, priv:kp.privateKey };
+  }
+  async function openIdentity(p, code){ /* throws when the code is wrong */
+    var pt = await crypto.subtle.decrypt({ name:"AES-GCM", iv:unb64(p.sk.iv) }, await codeKey(code, p.salt), unb64(p.sk.ct));
+    return crypto.subtle.importKey("jwk", JSON.parse(dec.decode(pt)), ECDH, false, ["deriveKey"]);
+  }
+  async function sealFor(pubJson, text){
+    var pub = await crypto.subtle.importKey("jwk", JSON.parse(pubJson), ECDH, false, []);
+    var eph = await crypto.subtle.generateKey(ECDH, true, ["deriveKey"]);
+    var k = await crypto.subtle.deriveKey({ name:"ECDH", public:pub }, eph.privateKey, AES, false, ["encrypt"]);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = await crypto.subtle.encrypt({ name:"AES-GCM", iv:iv }, k, enc.encode(text));
+    return { epk:JSON.stringify(await crypto.subtle.exportKey("jwk", eph.publicKey)), iv:b64(iv), ct:b64(ct) };
+  }
+  async function unseal(priv, box){
+    var epk = await crypto.subtle.importKey("jwk", JSON.parse(box.epk), ECDH, false, []);
+    var k = await crypto.subtle.deriveKey({ name:"ECDH", public:epk }, priv, AES, false, ["decrypt"]);
+    return dec.decode(await crypto.subtle.decrypt({ name:"AES-GCM", iv:unb64(box.iv) }, k, unb64(box.ct)));
+  }
+  /*END*/
+
+  /* ---------- helpers ---------- */
+  function status(msg){ var s=$("status"); if(msg){ s.textContent=msg; s.hidden=false; } else { s.hidden=true; } }
+  function person(id){ return S.people.find(function(p){ return p.id===id; }) || null; }
+  function drawn(){ return S.state.phase==="drawn"; }
+  function wishesOf(p){ return (p && Array.isArray(p.wishes) ? p.wishes : []).filter(function(w){ return w && (w.title||w.url); }); }
+  function el(tag, cls, text){ var n=document.createElement(tag); if(cls) n.className=cls; if(text!=null) n.textContent=text; return n; }
+  function fail(elm, e){
+    elm.textContent = (e && e.denied) ? "La base de données a refusé l'enregistrement. Rechargez la page et réessayez."
+      : "L'enregistrement n'a pas abouti. Vérifiez votre connexion et réessayez.";
+  }
+  function cleanUrl(raw){
+    var u=(raw||"").trim(); if(!u) return "";
+    if(!/^https?:\/\//i.test(u)) u="https://"+u;
+    try{ var p=new URL(u); if(p.protocol!=="http:"&&p.protocol!=="https:") return null; if(p.hostname.indexOf(".")<0) return null; return p.href; }
+    catch(_){ return null; }
+  }
+  function twoStep(btn, confirmText, action){
+    var base=btn.textContent, armed=false, t=null;
+    btn.addEventListener("click", function(){
+      if(S.busy) return;
+      if(!armed){ armed=true; btn.textContent=confirmText;
+        t=setTimeout(function(){ armed=false; btn.textContent=base; },5000); return; }
+      clearTimeout(t); armed=false; btn.textContent=base; action();
+    });
+  }
+  function shuffle(a){
+    for(var i=a.length-1;i>0;i--){
+      var r=new Uint32Array(1); crypto.getRandomValues(r);
+      var j=r[0]%(i+1), x=a[i]; a[i]=a[j]; a[j]=x;
+    }
+    return a;
+  }
+  function remember(id){ try{ localStorage.setItem("santa-me", id); }catch(_){} }
+  function remembered(){ try{ return localStorage.getItem("santa-me")||""; }catch(_){ return ""; } }
+
+  /* Three gift-idea rows; prefix "j" for the sign-up form, "w" for the edit form. */
+  function buildRows(box, pre){
+    for(var i=1;i<=3;i++){
+      var d=el("div","wish");
+      d.innerHTML='<span class="num">Idée '+i+'</span>'+
+        '<label for="'+pre+'t'+i+'">Quoi<input id="'+pre+'t'+i+'" maxlength="120" placeholder="Un livre de cuisine végétale"></label>'+
+        '<label for="'+pre+'u'+i+'">Lien internet (facultatif)<input id="'+pre+'u'+i+'" maxlength="500" inputmode="url" placeholder="https://…"></label>';
+      box.appendChild(d);
+    }
+  }
+  function collectWishes(pre, errEl){
+    var out=[];
+    for(var i=1;i<=3;i++){
+      var ti=$(pre+"t"+i).value.trim().slice(0,120), u=cleanUrl($(pre+"u"+i).value);
+      if(u===null){ errEl.textContent="Le lien de l'idée "+i+" n'est pas une adresse web valide."; $(pre+"u"+i).focus(); return null; }
+      if(u && !ti){ errEl.textContent="Donnez un nom à l'idée "+i+"."; $(pre+"t"+i).focus(); return null; }
+      if(ti||u) out.push({ title:ti, url:u });
+    }
+    return out;
+  }
+  buildRows($("joinRows"),"j"); buildRows($("wishRows"),"w");
+  $("wishForm").addEventListener("input", function(){ S.wishDirty=true; $("wishOk").textContent=""; });
+  function fillWishes(){
+    if(S.wishDirty || !S.session) return;
+    var p=person(S.session.id), w=(p&&Array.isArray(p.wishes))?p.wishes:[];
+    for(var i=1;i<=3;i++){ var x=w[i-1]||{}; $("wt"+i).value=x.title||""; $("wu"+i).value=x.url||""; }
+    $("wishNote").value=(p&&p.note)||"";
+  }
+
+  /* ---------- loading ---------- */
+  async function load(){
+    try{
+      var d = (await api("GET","")) || {};
+      var pp = d.people || {};
+      S.people = Object.keys(pp).map(function(id){ return Object.assign({ id:id }, pp[id]); })
+        .filter(function(p){ return p.name && p.pub && p.sk && p.salt; })
+        .sort(function(a,b){ return (a.joinedAt||0)-(b.joinedAt||0); });
+      S.state = (d.meta && d.meta.state) || {};
+      S.admin = (d.meta && d.meta.admin) || null;
+      S.draw = d.draw || {};
+      S.loaded = true; status("");
+      if(S.session && !person(S.session.id)){ S.session=null; S.revealed=null; S.wishDirty=false; }
+    }catch(e){
+      if(!S.loaded) status(e.denied ? "La base de données refuse l'accès : ses règles d'accès ne sont pas encore en place."
+        : "Impossible de joindre la base de données. Vérifiez votre connexion ; la page réessaie toute seule.");
+    }
+    render();
+  }
+
+  /* ---------- render ---------- */
+  function syncSelects(){
+    var sig=S.people.map(function(p){ return p.id+":"+p.name; }).join("|");
+    if(sig===S.selSig) return; S.selSig=sig;
+    ["u1Sel","u2Sel"].forEach(function(id){
+      var sel=$(id), keep=sel.value||remembered(); sel.textContent="";
+      var o0=el("option",null,"Choisir mon prénom"); o0.value=""; sel.appendChild(o0);
+      S.people.forEach(function(p){ var o=el("option",null,p.name); o.value=p.id; sel.appendChild(o); });
+      sel.value = person(keep) ? keep : "";
+    });
+  }
+  function render(){
+    var isDrawn=drawn(), n=S.people.length, me=S.session?person(S.session.id):null;
+    route();
+    $("phase").textContent=isDrawn?"Tirage effectué":"Inscriptions ouvertes";
+    $("phase").classList.toggle("done", isDrawn);
+    $("count").textContent=n+(n>1?" inscrits":" inscrit");
+    $("factBudget").hidden=!S.state.budget; $("factBudget").textContent="Budget "+(S.state.budget||"");
+    $("factDate").hidden=!S.state.date; $("factDate").textContent="Échange le "+(S.state.date||"");
+
+    /* inscription et idées */
+    $("joinForm").hidden=!S.loaded || isDrawn;
+    $("closedCard").hidden=!isDrawn;
+    $("editCard").hidden=!n;
+    syncSelects();
+    $("unlock1").hidden=!!me; $("wishForm").hidden=!me;
+    if(me){ $("helloText").textContent="Bonjour "+me.name+", voici vos idées."; fillWishes(); $("leaveBtn").hidden=isDrawn; }
+    var ul=$("people"); ul.textContent="";
+    $("peopleEmpty").hidden=n>0 || !S.loaded;
+    S.people.forEach(function(p){
+      var li=el("li"), nm=el("span","name",p.name);
+      if(me && p.id===me.id) nm.appendChild(el("span","via"," (vous)"));
+      var k=wishesOf(p).length;
+      li.appendChild(nm); li.appendChild(el("span","chip"+(k?" has":""), k?(k+(k>1?" idées":" idée")):"pas d'idée"));
+      if(S.isAdmin && !isDrawn){
+        var b=el("button","quiet small","Retirer"); b.type="button"; b.setAttribute("aria-label","Retirer "+p.name);
+        b.addEventListener("click", function(){ removePerson(p.id); });
+        li.appendChild(b);
+      }
+      ul.appendChild(li);
+    });
+
+    /* tirage */
+    $("drawDone").hidden=!isDrawn;
+    $("unlock2").hidden=!!me; $("reveal").hidden=!me;
+    $("revealBtn").hidden=!!S.revealed; $("revealBody").hidden=!S.revealed;
+    if(me && S.revealed){
+      var to=person(S.revealed), none=S.revealed==="none";
+      $("revealLead").textContent=none?"":"Vous offrez un cadeau à";
+      $("who").textContent=none?"":(to?to.name:"un participant introuvable");
+      var note=(!none && to && typeof to.note==="string") ? to.note.trim() : "";
+      $("toNote").hidden=!note; $("toNote").textContent=note;
+      var g=$("gifts"); g.textContent=""; var ws=none?[]:wishesOf(to);
+      $("giftsEmpty").hidden=ws.length>0;
+      $("giftsEmpty").textContent=none?"Vous n'étiez pas inscrit au moment du tirage, vous n'avez donc personne à gâter cette fois."
+        :"Pas encore d'idées notées pour cette personne. Repassez plus tard.";
+      ws.forEach(function(w){
+        var li=el("li"); li.appendChild(el("span",null,w.title||"Idée sans titre"));
+        var href=cleanUrl(w.url);
+        if(href){ var a=el("a"); a.href=href; a.target="_blank"; a.rel="noopener noreferrer";
+          var host=""; try{ host=new URL(href).hostname.replace(/^www\./,""); }catch(_){}
+          a.textContent="Voir sur "+host; li.appendChild(a); }
+        g.appendChild(li);
+      });
+    }
+
+    /* organisateur */
+    $("adminSetup").hidden=!S.loaded || !!S.admin || S.isAdmin;
+    $("adminLogin").hidden=!S.admin || S.isAdmin;
+    $("adminPanel").hidden=!S.isAdmin;
+    if(S.isAdmin){
+      $("drawBtn").hidden=isDrawn; $("drawBtn").disabled=n<3; $("resetBtn").hidden=!isDrawn;
+      $("adminInfo").textContent=isDrawn?"Le tirage est fait pour "+Object.keys(S.draw).length+" personnes. Chacun découvre son résultat avec son code secret.":
+        (n<3?"Il faut au moins trois inscrits pour tirer au sort. Il y en a "+n+" pour l'instant."
+            :n+" personnes sont inscrites. Le tirage clôt les inscriptions. Vous pouvez retirer un inscrit depuis la liste des participants.");
+      if(document.activeElement!==$("budget")) $("budget").value=S.state.budget||"";
+      if(document.activeElement!==$("date")) $("date").value=S.state.date||"";
+    }
+  }
+
+  /* ---------- participant actions ---------- */
+  $("joinForm").addEventListener("submit", async function(e){
+    e.preventDefault(); if(S.busy) return;
+    var errEl=$("joinErr"); errEl.textContent="";
+    var name=$("joinName").value.trim().replace(/\s+/g," ").slice(0,40), pin=$("joinPin").value.trim();
+    if(!name){ errEl.textContent="Indiquez votre prénom."; $("joinName").focus(); return; }
+    if(S.people.some(function(p){ return p.name.toLowerCase()===name.toLowerCase(); })){
+      errEl.textContent="Ce prénom est déjà inscrit. Ajoutez une initiale pour vous distinguer, ou modifiez vos idées plus bas."; $("joinName").focus(); return; }
+    if(!/^[0-9]{4,8}$/.test(pin)){ errEl.textContent="Choisissez un code secret de 4 à 8 chiffres."; $("joinPin").focus(); return; }
+    var out=collectWishes("j", errEl); if(out===null) return;
+    var note=$("joinNote").value.trim().slice(0,300);
+    S.busy=true; $("joinBtn").disabled=true; $("joinBtn").textContent="Inscription en cours…";
+    try{
+      var st=(await api("GET","/meta/state")) || {};
+      if(st.phase==="drawn"){ errEl.textContent="Les inscriptions viennent d'être closes."; }
+      else {
+        var idn=await makeIdentity(pin), id=rid();
+        var rec=Object.assign({ name:name, wishes:out, note:note, joinedAt:Date.now() }, idn.record);
+        await api("PUT","/people/"+id, rec);
+        S.session={ id:id, priv:idn.priv }; S.revealed=null; S.wishDirty=false; remember(id);
+        $("joinForm").reset();
+        $("wishOk").textContent="Inscription enregistrée. Vous pourrez revenir compléter vos idées avec votre code secret.";
+      }
+    }catch(err){ fail(errEl, err); }
+    S.busy=false; $("joinBtn").disabled=false; $("joinBtn").textContent="Je m'inscris";
+    await load();
+  });
+
+  function wireUnlock(n){
+    $("unlock"+n).addEventListener("submit", async function(e){
+      e.preventDefault(); if(S.busy) return;
+      var errEl=$("u"+n+"Err"), p=person($("u"+n+"Sel").value), pin=$("u"+n+"Pin").value.trim(); errEl.textContent="";
+      if(!p){ errEl.textContent="Choisissez votre prénom dans la liste."; return; }
+      if(!pin){ errEl.textContent="Tapez votre code secret."; return; }
+      S.busy=true;
+      try{
+        var priv=await openIdentity(p, pin);
+        S.session={ id:p.id, priv:priv }; S.revealed=null; S.wishDirty=false; remember(p.id);
+        $("u1Pin").value=""; $("u2Pin").value=""; $("wishOk").textContent=""; $("wishErr").textContent="";
+      }catch(_){ errEl.textContent="Ce n'est pas le bon code pour "+p.name+"."; }
+      S.busy=false; render();
+    });
+  }
+  wireUnlock(1); wireUnlock(2);
+  function lock(){ S.session=null; S.revealed=null; S.wishDirty=false; $("wishOk").textContent=""; render(); }
+  $("lockBtn1").addEventListener("click", lock);
+  $("lockBtn2").addEventListener("click", lock);
+
+  $("wishForm").addEventListener("submit", async function(e){
+    e.preventDefault(); if(S.busy||!S.session) return;
+    var errEl=$("wishErr"); errEl.textContent=""; $("wishOk").textContent="";
+    var out=collectWishes("w", errEl); if(out===null) return;
+    S.busy=true; $("wishBtn").disabled=true;
+    try{ await api("PATCH","/people/"+S.session.id, { wishes:out, note:$("wishNote").value.trim().slice(0,300) }); S.wishDirty=false; $("wishOk").textContent="Idées enregistrées."; }
+    catch(err){ fail(errEl, err); }
+    S.busy=false; $("wishBtn").disabled=false;
+    await load();
+  });
+  twoStep($("leaveBtn"), "Confirmer la désinscription", async function(){
+    if(!S.session || drawn()) return; S.busy=true;
+    try{ await api("DELETE","/people/"+S.session.id); S.session=null; S.revealed=null; S.wishDirty=false; }
+    catch(err){ fail($("wishErr"), err); }
+    S.busy=false; await load();
+  });
+  $("revealBtn").addEventListener("click", async function(){
+    if(!S.session || S.busy) return; var box=S.draw[S.session.id];
+    if(!box){ S.revealed="none"; render(); return; }
+    S.busy=true;
+    try{ S.revealed=await unseal(S.session.priv, box); }
+    catch(_){ status("Votre résultat n'a pas pu être déchiffré. Rechargez la page et réessayez."); }
+    S.busy=false; render();
+  });
+
+  /* ---------- organiser actions ---------- */
+  $("adminSetup").addEventListener("submit", async function(e){
+    e.preventDefault(); if(S.busy) return; var errEl=$("adminErr"), code=$("adminNew").value; errEl.textContent="";
+    if(code.length<6){ errEl.textContent="Choisissez un code organisateur d'au moins 6 caractères."; return; }
+    S.busy=true;
+    try{
+      var salt=rid(), vh=await verifier(code, salt);
+      await api("PUT","/meta/admin", { salt:salt, vh:vh });
+      S.isAdmin=true; rememberOrg(); $("adminNew").value="";
+    }catch(err){ errEl.textContent=err.denied?"Un organisateur est déjà déclaré pour ce tirage.":"L'enregistrement n'a pas abouti. Réessayez."; }
+    S.busy=false; await load();
+  });
+  $("adminLogin").addEventListener("submit", async function(e){
+    e.preventDefault(); if(S.busy||!S.admin) return; var errEl=$("adminErr"); errEl.textContent="";
+    S.busy=true;
+    try{
+      if(await verifier($("adminPin").value, S.admin.salt)===S.admin.vh){ S.isAdmin=true; rememberOrg(); $("adminPin").value=""; }
+      else errEl.textContent="Ce n'est pas le bon code organisateur.";
+    }catch(_){ errEl.textContent="La vérification n'a pas abouti. Réessayez."; }
+    S.busy=false; render();
+  });
+  $("adminLock").addEventListener("click", function(){ S.isAdmin=false; render(); });
+  $("metaForm").addEventListener("submit", async function(e){
+    e.preventDefault(); if(S.busy||!S.isAdmin) return; var errEl=$("adminErr"); errEl.textContent=""; S.busy=true;
+    try{ await api("PATCH","/meta/state", { budget:$("budget").value.trim().slice(0,30), date:$("date").value.trim().slice(0,40) }); }
+    catch(err){ fail(errEl, err); }
+    S.busy=false; await load();
+  });
+  async function removePerson(id){
+    if(S.busy||!S.isAdmin||drawn()) return; S.busy=true;
+    try{ await api("DELETE","/people/"+id); }catch(err){ fail($("adminErr"), err); }
+    S.busy=false; await load();
+  }
+  twoStep($("drawBtn"), "Confirmer le tirage au sort", async function(){
+    if(!S.isAdmin) return; var errEl=$("adminErr"); errEl.textContent="";
+    S.busy=true; $("drawBtn").disabled=true; status("Tirage en cours…");
+    try{
+      await load();
+      if(drawn()) throw { soft:"Le tirage a déjà été fait." };
+      if(S.people.length<3) throw { soft:"Il faut au moins trois inscrits." };
+      var order=shuffle(S.people.slice()), boxes={}; /* one loop: each person gives to the next, nobody draws themselves */
+      for(var i=0;i<order.length;i++){ boxes[order[i].id]=await sealFor(order[i].pub, order[(i+1)%order.length].id); }
+      await api("PUT","/draw", boxes);
+      await api("PATCH","/meta/state", { phase:"drawn", drawnAt:Date.now() });
+      status("");
+    }catch(err){ status(""); if(err && err.soft) errEl.textContent=err.soft; else fail(errEl, err); }
+    S.busy=false; await load();
+  });
+  twoStep($("resetBtn"), "Confirmer l'annulation du tirage", async function(){
+    if(!S.isAdmin) return; var errEl=$("adminErr"); errEl.textContent=""; S.busy=true;
+    try{ await api("PATCH","/meta/state", { phase:"open", drawnAt:null }); await api("DELETE","/draw"); S.revealed=null; }
+    catch(err){ fail(errEl, err); }
+    S.busy=false; await load();
+  });
+
+  /* ---------- boot ---------- */
+  render();
+  if(!window.crypto || !crypto.subtle){ status("Ce navigateur ne permet pas de protéger les codes secrets. Ouvrez la page avec un navigateur récent, à son adresse en https."); return; }
+  load();
+  setInterval(function(){ if(document.visibilityState==="visible" && !S.busy) load(); }, 20000);
+})();
+</script>
+</body>
+</html>
