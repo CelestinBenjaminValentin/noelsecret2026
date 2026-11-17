@@ -85,6 +85,12 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 #joinRows,#wishRows{display:flex;flex-direction:column;gap:12px}
 .wish{border-top:1px dashed var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
 .wish:first-of-type{border-top:0;padding-top:0}
+.wish-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+label.check{flex-direction:row;align-items:center;gap:12px;font-weight:500;font-size:.95rem;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer}
+input[type="checkbox"]{width:22px;height:22px;flex:none;margin:0;padding:0;accent-color:var(--accent)}
+button.add{width:100%;border-style:dashed;padding:12px}
+h3{font-family:var(--display);font-weight:700;font-size:1.25rem;margin:0;color:var(--pale)}
+.rescue{border-top:1px solid var(--line);padding-top:14px}
 .num{font-family:var(--display);font-weight:700;color:var(--accent);font-size:1.12rem;letter-spacing:.02em}
 .reveal{border:1px solid var(--accent);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;background:rgba(233,196,106,.06)}
 .reveal .who{font-family:var(--display);font-weight:700;font-size:2.4rem;line-height:1.05;overflow-wrap:anywhere;color:var(--pale)}
@@ -132,8 +138,12 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
         <input id="joinPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
       </label>
       <p class="muted">Ce code vous sera demandé pour modifier vos idées et pour découvrir votre tirage. Personne ne peut le retrouver à votre place : notez-le.</p>
-      <span class="num">Étape 2 · Mes idées de cadeaux</span>
-      <div id="joinRows"></div>
+      <span class="num">Étape 2 · Mes idées de cadeaux (facultatif)</span>
+      <label class="check" for="jOpen"><input type="checkbox" id="jOpen"> Sans idée particulière, tout cadeau me fera plaisir</label>
+      <div class="stack" id="jIdeas">
+        <div id="joinRows"></div>
+        <button type="button" class="quiet add" id="jAdd">+ Je donne une idée de cadeau</button>
+      </div>
       <span class="num">Étape 3 · Un mot en plus</span>
       <label for="joinNote">Commentaire libre (facultatif)
         <textarea id="joinNote" maxlength="300" placeholder="Mes goûts, ma taille, ce que j'ai déjà, ce qu'il vaut mieux éviter…"></textarea>
@@ -161,7 +171,11 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       <form class="stack" id="wishForm" novalidate hidden>
         <p class="ok" id="helloText"></p>
         <p class="muted">Jusqu'à trois idées, avec un lien internet si vous en avez un. Elles seront montrées à la personne qui vous tirera au sort.</p>
-        <div id="wishRows"></div>
+        <label class="check" for="wOpen"><input type="checkbox" id="wOpen"> Sans idée particulière, tout cadeau me fera plaisir</label>
+        <div class="stack" id="wIdeas">
+          <div id="wishRows"></div>
+          <button type="button" class="quiet add" id="wAdd">+ Je donne une idée de cadeau</button>
+        </div>
         <label for="wishNote">Commentaire libre (facultatif)
           <textarea id="wishNote" maxlength="300" placeholder="Mes goûts, ma taille, ce que j'ai déjà, ce qu'il vaut mieux éviter…"></textarea>
         </label>
@@ -240,6 +254,25 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
           <button type="submit" class="quiet">Enregistrer</button>
         </form>
         <div class="row"><button type="button" id="drawBtn">Clore les inscriptions et tirer au sort</button></div>
+        <div class="stack rescue" id="rescue" hidden>
+          <h3>Un participant a oublié son code ?</h3>
+          <p class="muted">Affichez ici son tirage pour le lui transmettre. Seul l'écran de l'organisateur le montre, et rien n'est modifié.</p>
+          <form class="row" id="rescueForm" novalidate>
+            <label for="rescueSel">Participant
+              <select id="rescueSel"></select>
+            </label>
+            <button type="submit" class="quiet">Afficher son tirage</button>
+          </form>
+          <p class="err" id="rescueErr"></p>
+          <div class="reveal" id="rescueOut" hidden>
+            <p class="muted" id="rLead"></p>
+            <p class="who" id="rWho"></p>
+            <p class="note" id="rNote" hidden></p>
+            <p class="muted" id="rEmpty" hidden></p>
+            <ul class="gifts" id="rGifts"></ul>
+            <button type="button" class="quiet small" id="rHide">Masquer</button>
+          </div>
+        </div>
         <div class="row"><button type="button" class="quiet small" id="resetBtn">Annuler le tirage et rouvrir les inscriptions</button></div>
         <div class="row"><button type="button" class="quiet small" id="adminLock">Fermer l'espace organisateur</button></div>
       </div>
@@ -370,7 +403,7 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
   "use strict";
   var DB = "https://application-noel-secret-2026-default-rtdb.europe-west1.firebasedatabase.app/santa";
   var $ = function(id){ return document.getElementById(id); };
-  var S = { people:[], state:{}, admin:null, draw:{}, loaded:false, session:null, isAdmin:false,
+  var S = { people:[], state:{}, admin:null, draw:{}, loaded:false, session:null, isAdmin:false, adminKey:null, rescue:null,
             revealed:null, wishDirty:false, selSig:null, busy:false };
   var VIEWS = ["inscriptions","tirage","organisateur"];
 
@@ -448,12 +481,21 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
     var k = await crypto.subtle.deriveKey({ name:"ECDH", public:epk }, priv, AES, false, ["decrypt"]);
     return dec.decode(await crypto.subtle.decrypt({ name:"AES-GCM", iv:unb64(box.iv) }, k, unb64(box.ct)));
   }
+  async function aesSeal(key, text){
+    var iv=crypto.getRandomValues(new Uint8Array(12));
+    var ct=await crypto.subtle.encrypt({ name:"AES-GCM", iv:iv }, key, enc.encode(text));
+    return { iv:b64(iv), ct:b64(ct) };
+  }
+  async function aesOpen(key, box){
+    return dec.decode(await crypto.subtle.decrypt({ name:"AES-GCM", iv:unb64(box.iv) }, key, unb64(box.ct)));
+  }
   /*END*/
 
   /* ---------- helpers ---------- */
   function status(msg){ var s=$("status"); if(msg){ s.textContent=msg; s.hidden=false; } else { s.hidden=true; } }
   function person(id){ return S.people.find(function(p){ return p.id===id; }) || null; }
   function drawn(){ return S.state.phase==="drawn"; }
+  function drawCount(){ return Object.keys(S.draw).filter(function(k){ return k!=="_org"; }).length; }
   function wishesOf(p){ return (p && Array.isArray(p.wishes) ? p.wishes : []).filter(function(w){ return w && (w.title||w.url); }); }
   function el(tag, cls, text){ var n=document.createElement(tag); if(cls) n.className=cls; if(text!=null) n.textContent=text; return n; }
   function fail(elm, e){
@@ -485,33 +527,87 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
   function remember(id){ try{ localStorage.setItem("santa-me", id); }catch(_){} }
   function remembered(){ try{ return localStorage.getItem("santa-me")||""; }catch(_){ return ""; } }
 
-  /* Three gift-idea rows; prefix "j" for the sign-up form, "w" for the edit form. */
-  function buildRows(box, pre){
+  /* Gift ideas, shown one at a time: a "no particular idea" box, then up to three rows added on demand.
+     Prefix "j" for the sign-up form, "w" for the edit form. */
+  var IDEAS={ j:{ n:0 }, w:{ n:0 } };
+  function buildRows(pre){
+    var box=$(pre==="j"?"joinRows":"wishRows");
     for(var i=1;i<=3;i++){
-      var d=el("div","wish");
-      d.innerHTML='<span class="num">Idée '+i+'</span>'+
-        '<label for="'+pre+'t'+i+'">Quoi<input id="'+pre+'t'+i+'" maxlength="120" placeholder="Un livre de cuisine végétale"></label>'+
+      var d=el("div","wish"); d.id=pre+"r"+i;
+      d.innerHTML='<div class="wish-head"><span class="num">Idée '+i+'</span>'+
+        '<button type="button" class="quiet small" id="'+pre+'x'+i+'">Retirer</button></div>'+
+        '<label for="'+pre+'t'+i+'">Nom du cadeau<input id="'+pre+'t'+i+'" maxlength="120" placeholder="Un livre de cuisine végétale"></label>'+
         '<label for="'+pre+'u'+i+'">Lien internet (facultatif)<input id="'+pre+'u'+i+'" maxlength="500" inputmode="url" placeholder="https://…"></label>';
       box.appendChild(d);
+      (function(k){ $(pre+"x"+k).addEventListener("click", function(){ ideasRemove(pre,k); touched(pre); }); })(i);
     }
+    $(pre+"Add").addEventListener("click", function(){ ideasAdd(pre); touched(pre); });
+    $(pre+"Open").addEventListener("change", function(){ ideasRender(pre); touched(pre); });
+    ideasRender(pre);
   }
-  function collectWishes(pre, errEl){
+  function touched(pre){ if(pre==="w"){ S.wishDirty=true; $("wishOk").textContent=""; } }
+  function rowVals(pre,i){ return { title:$(pre+"t"+i).value, url:$(pre+"u"+i).value }; }
+  function setRow(pre,i,v){ $(pre+"t"+i).value=(v&&v.title)||""; $(pre+"u"+i).value=(v&&v.url)||""; }
+  function ideasRender(pre){
+    var n=IDEAS[pre].n;
+    $(pre+"Ideas").hidden=$(pre+"Open").checked;
+    for(var i=1;i<=3;i++) $(pre+"r"+i).hidden=(i>n);
+    $(pre+"Add").hidden=(n>=3);
+    $(pre+"Add").textContent=n ? "+ Je donne une autre idée" : "+ Je donne une idée de cadeau";
+  }
+  function ideasAdd(pre){
+    var st=IDEAS[pre]; if(st.n>=3) return;
+    st.n++; setRow(pre,st.n,null); ideasRender(pre);
+    try{ $(pre+"t"+st.n).focus(); }catch(_){}
+  }
+  function ideasRemove(pre,i){ /* close the gap so the remaining ideas stay numbered 1, 2, 3 */
+    var st=IDEAS[pre];
+    for(var k=i;k<st.n;k++) setRow(pre,k,rowVals(pre,k+1));
+    setRow(pre,st.n,null); st.n=Math.max(0,st.n-1); ideasRender(pre);
+  }
+  function ideasSet(pre, wishes, open){
+    var ws=(Array.isArray(wishes)?wishes:[]).filter(function(w){ return w && (w.title||w.url); }).slice(0,3);
+    IDEAS[pre].n=ws.length;
+    for(var i=1;i<=3;i++) setRow(pre,i,ws[i-1]||null);
+    $(pre+"Open").checked=!!open && !ws.length;
+    ideasRender(pre);
+  }
+  function ideasCollect(pre, errEl){
+    if($(pre+"Open").checked) return { wishes:[], open:true };
     var out=[];
-    for(var i=1;i<=3;i++){
+    for(var i=1;i<=IDEAS[pre].n;i++){
       var ti=$(pre+"t"+i).value.trim().slice(0,120), u=cleanUrl($(pre+"u"+i).value);
       if(u===null){ errEl.textContent="Le lien de l'idée "+i+" n'est pas une adresse web valide."; $(pre+"u"+i).focus(); return null; }
       if(u && !ti){ errEl.textContent="Donnez un nom à l'idée "+i+"."; $(pre+"t"+i).focus(); return null; }
       if(ti||u) out.push({ title:ti, url:u });
     }
-    return out;
+    return { wishes:out, open:false };
   }
-  buildRows($("joinRows"),"j"); buildRows($("wishRows"),"w");
+  buildRows("j"); buildRows("w");
   $("wishForm").addEventListener("input", function(){ S.wishDirty=true; $("wishOk").textContent=""; });
   function fillWishes(){
     if(S.wishDirty || !S.session) return;
-    var p=person(S.session.id), w=(p&&Array.isArray(p.wishes))?p.wishes:[];
-    for(var i=1;i<=3;i++){ var x=w[i-1]||{}; $("wt"+i).value=x.title||""; $("wu"+i).value=x.url||""; }
+    var p=person(S.session.id);
+    ideasSet("w", p&&p.wishes, p&&p.open);
     $("wishNote").value=(p&&p.note)||"";
+  }
+
+  /* Gift list shown to the giver, on the participant's screen and in the organiser's rescue panel. */
+  function showGifts(ids, to){
+    var note=(to && typeof to.note==="string") ? to.note.trim() : "";
+    $(ids.note).hidden=!note; $(ids.note).textContent=note;
+    var g=$(ids.list); g.textContent=""; var ws=wishesOf(to);
+    $(ids.empty).hidden=ws.length>0;
+    $(ids.empty).textContent=(to && to.open) ? "Sans idée particulière : tout cadeau lui fera plaisir."
+      : "Pas encore d'idées notées pour cette personne. Repassez plus tard.";
+    ws.forEach(function(w){
+      var li=el("li"); li.appendChild(el("span",null,w.title||"Idée sans titre"));
+      var href=cleanUrl(w.url);
+      if(href){ var a=el("a"); a.href=href; a.target="_blank"; a.rel="noopener noreferrer";
+        var host=""; try{ host=new URL(href).hostname.replace(/^www\./,""); }catch(_){}
+        a.textContent="Voir sur "+host; li.appendChild(a); }
+      g.appendChild(li);
+    });
   }
 
   /* ---------- loading ---------- */
@@ -538,9 +634,9 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
   function syncSelects(){
     var sig=S.people.map(function(p){ return p.id+":"+p.name; }).join("|");
     if(sig===S.selSig) return; S.selSig=sig;
-    ["u1Sel","u2Sel"].forEach(function(id){
-      var sel=$(id), keep=sel.value||remembered(); sel.textContent="";
-      var o0=el("option",null,"Choisir mon prénom"); o0.value=""; sel.appendChild(o0);
+    ["u1Sel","u2Sel","rescueSel"].forEach(function(id){
+      var sel=$(id), keep=sel.value||(id==="rescueSel"?"":remembered()); sel.textContent="";
+      var o0=el("option",null,id==="rescueSel"?"Choisir le participant":"Choisir mon prénom"); o0.value=""; sel.appendChild(o0);
       S.people.forEach(function(p){ var o=el("option",null,p.name); o.value=p.id; sel.appendChild(o); });
       sel.value = person(keep) ? keep : "";
     });
@@ -567,7 +663,7 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       var li=el("li"), nm=el("span","name",p.name);
       if(me && p.id===me.id) nm.appendChild(el("span","via"," (vous)"));
       var k=wishesOf(p).length;
-      li.appendChild(nm); li.appendChild(el("span","chip"+(k?" has":""), k?(k+(k>1?" idées":" idée")):"pas d'idée"));
+      li.appendChild(nm); li.appendChild(el("span","chip"+((k||p.open)?" has":""), k?(k+(k>1?" idées":" idée")):(p.open?"tout lui plaît":"pas d'idée")));
       if(S.isAdmin && !isDrawn){
         var b=el("button","quiet small","Retirer"); b.type="button"; b.setAttribute("aria-label","Retirer "+p.name);
         b.addEventListener("click", function(){ removePerson(p.id); });
@@ -584,20 +680,10 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       var to=person(S.revealed), none=S.revealed==="none";
       $("revealLead").textContent=none?"":"Vous offrez un cadeau à";
       $("who").textContent=none?"":(to?to.name:"un participant introuvable");
-      var note=(!none && to && typeof to.note==="string") ? to.note.trim() : "";
-      $("toNote").hidden=!note; $("toNote").textContent=note;
-      var g=$("gifts"); g.textContent=""; var ws=none?[]:wishesOf(to);
-      $("giftsEmpty").hidden=ws.length>0;
-      $("giftsEmpty").textContent=none?"Vous n'étiez pas inscrit au moment du tirage, vous n'avez donc personne à gâter cette fois."
-        :"Pas encore d'idées notées pour cette personne. Repassez plus tard.";
-      ws.forEach(function(w){
-        var li=el("li"); li.appendChild(el("span",null,w.title||"Idée sans titre"));
-        var href=cleanUrl(w.url);
-        if(href){ var a=el("a"); a.href=href; a.target="_blank"; a.rel="noopener noreferrer";
-          var host=""; try{ host=new URL(href).hostname.replace(/^www\./,""); }catch(_){}
-          a.textContent="Voir sur "+host; li.appendChild(a); }
-        g.appendChild(li);
-      });
+      if(none){
+        $("toNote").hidden=true; $("gifts").textContent=""; $("giftsEmpty").hidden=false;
+        $("giftsEmpty").textContent="Vous n'étiez pas inscrit au moment du tirage, vous n'avez donc personne à gâter cette fois.";
+      } else showGifts({ note:"toNote", list:"gifts", empty:"giftsEmpty" }, to);
     }
 
     /* organisateur */
@@ -606,9 +692,16 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
     $("adminPanel").hidden=!S.isAdmin;
     if(S.isAdmin){
       $("drawBtn").hidden=isDrawn; $("drawBtn").disabled=n<3; $("resetBtn").hidden=!isDrawn;
-      $("adminInfo").textContent=isDrawn?"Le tirage est fait pour "+Object.keys(S.draw).length+" personnes. Chacun découvre son résultat avec son code secret.":
+      $("adminInfo").textContent=isDrawn?"Le tirage est fait pour "+drawCount()+" personnes. Chacun découvre son résultat avec son code secret.":
         (n<3?"Il faut au moins trois inscrits pour tirer au sort. Il y en a "+n+" pour l'instant."
             :n+" personnes sont inscrites. Le tirage clôt les inscriptions. Vous pouvez retirer un inscrit depuis la liste des participants.");
+      $("rescue").hidden=!isDrawn; $("rescueOut").hidden=!S.rescue;
+      if(S.rescue){
+        var giver=person(S.rescue.giver), rec=person(S.rescue.to);
+        $("rLead").textContent=(giver?giver.name:"Ce participant")+" offre un cadeau à";
+        $("rWho").textContent=rec?rec.name:"un participant qui s'est retiré";
+        showGifts({ note:"rNote", list:"rGifts", empty:"rEmpty" }, rec);
+      }
       if(document.activeElement!==$("budget")) $("budget").value=S.state.budget||"";
       if(document.activeElement!==$("date")) $("date").value=S.state.date||"";
     }
@@ -623,7 +716,7 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
     if(S.people.some(function(p){ return p.name.toLowerCase()===name.toLowerCase(); })){
       errEl.textContent="Ce prénom est déjà inscrit. Ajoutez une initiale pour vous distinguer, ou modifiez vos idées plus bas."; $("joinName").focus(); return; }
     if(!/^[0-9]{4,8}$/.test(pin)){ errEl.textContent="Choisissez un code secret de 4 à 8 chiffres."; $("joinPin").focus(); return; }
-    var out=collectWishes("j", errEl); if(out===null) return;
+    var ideas=ideasCollect("j", errEl); if(ideas===null) return;
     var note=$("joinNote").value.trim().slice(0,300);
     S.busy=true; $("joinBtn").disabled=true; $("joinBtn").textContent="Inscription en cours…";
     try{
@@ -631,10 +724,10 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       if(st.phase==="drawn"){ errEl.textContent="Les inscriptions viennent d'être closes."; }
       else {
         var idn=await makeIdentity(pin), id=rid();
-        var rec=Object.assign({ name:name, wishes:out, note:note, joinedAt:Date.now() }, idn.record);
+        var rec=Object.assign({ name:name, wishes:ideas.wishes, open:ideas.open, note:note, joinedAt:Date.now() }, idn.record);
         await api("PUT","/people/"+id, rec);
         S.session={ id:id, priv:idn.priv }; S.revealed=null; S.wishDirty=false; remember(id);
-        $("joinForm").reset();
+        $("joinForm").reset(); ideasSet("j", [], false);
         $("wishOk").textContent="Inscription enregistrée. Vous pourrez revenir compléter vos idées avec votre code secret.";
       }
     }catch(err){ fail(errEl, err); }
@@ -665,9 +758,9 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
   $("wishForm").addEventListener("submit", async function(e){
     e.preventDefault(); if(S.busy||!S.session) return;
     var errEl=$("wishErr"); errEl.textContent=""; $("wishOk").textContent="";
-    var out=collectWishes("w", errEl); if(out===null) return;
+    var ideas=ideasCollect("w", errEl); if(ideas===null) return;
     S.busy=true; $("wishBtn").disabled=true;
-    try{ await api("PATCH","/people/"+S.session.id, { wishes:out, note:$("wishNote").value.trim().slice(0,300) }); S.wishDirty=false; $("wishOk").textContent="Idées enregistrées."; }
+    try{ await api("PATCH","/people/"+S.session.id, { wishes:ideas.wishes, open:ideas.open, note:$("wishNote").value.trim().slice(0,300) }); S.wishDirty=false; $("wishOk").textContent="Idées enregistrées."; }
     catch(err){ fail(errEl, err); }
     S.busy=false; $("wishBtn").disabled=false;
     await load();
@@ -695,6 +788,7 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
     try{
       var salt=rid(), vh=await verifier(code, salt);
       await api("PUT","/meta/admin", { salt:salt, vh:vh });
+      S.adminKey=await codeKey(code, "backup:"+salt);
       S.isAdmin=true; rememberOrg(); $("adminNew").value="";
     }catch(err){ errEl.textContent=err.denied?"Un organisateur est déjà déclaré pour ce tirage.":"L'enregistrement n'a pas abouti. Réessayez."; }
     S.busy=false; await load();
@@ -703,12 +797,14 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
     e.preventDefault(); if(S.busy||!S.admin) return; var errEl=$("adminErr"); errEl.textContent="";
     S.busy=true;
     try{
-      if(await verifier($("adminPin").value, S.admin.salt)===S.admin.vh){ S.isAdmin=true; rememberOrg(); $("adminPin").value=""; }
+      var code=$("adminPin").value;
+      if(await verifier(code, S.admin.salt)===S.admin.vh){
+        S.adminKey=await codeKey(code, "backup:"+S.admin.salt); S.isAdmin=true; rememberOrg(); $("adminPin").value=""; }
       else errEl.textContent="Ce n'est pas le bon code organisateur.";
     }catch(_){ errEl.textContent="La vérification n'a pas abouti. Réessayez."; }
     S.busy=false; render();
   });
-  $("adminLock").addEventListener("click", function(){ S.isAdmin=false; render(); });
+  $("adminLock").addEventListener("click", function(){ S.isAdmin=false; S.adminKey=null; S.rescue=null; render(); });
   $("metaForm").addEventListener("submit", async function(e){
     e.preventDefault(); if(S.busy||!S.isAdmin) return; var errEl=$("adminErr"); errEl.textContent=""; S.busy=true;
     try{ await api("PATCH","/meta/state", { budget:$("budget").value.trim().slice(0,30), date:$("date").value.trim().slice(0,40) }); }
@@ -727,8 +823,14 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
       await load();
       if(drawn()) throw { soft:"Le tirage a déjà été fait." };
       if(S.people.length<3) throw { soft:"Il faut au moins trois inscrits." };
+      if(!S.adminKey) throw { soft:"Fermez puis rouvrez l'espace organisateur avec votre code, puis relancez le tirage." };
       var order=shuffle(S.people.slice()), boxes={}; /* one loop: each person gives to the next, nobody draws themselves */
-      for(var i=0;i<order.length;i++){ boxes[order[i].id]=await sealFor(order[i].pub, order[(i+1)%order.length].id); }
+      var map={};
+      for(var i=0;i<order.length;i++){
+        var to=order[(i+1)%order.length].id; map[order[i].id]=to;
+        boxes[order[i].id]=await sealFor(order[i].pub, to);
+      }
+      boxes._org=await aesSeal(S.adminKey, JSON.stringify(map)); /* organiser's copy, for forgotten codes */
       await api("PUT","/draw", boxes);
       await api("PATCH","/meta/state", { phase:"drawn", drawnAt:Date.now() });
       status("");
@@ -737,9 +839,26 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
   });
   twoStep($("resetBtn"), "Confirmer l'annulation du tirage", async function(){
     if(!S.isAdmin) return; var errEl=$("adminErr"); errEl.textContent=""; S.busy=true;
-    try{ await api("PATCH","/meta/state", { phase:"open", drawnAt:null }); await api("DELETE","/draw"); S.revealed=null; }
+    try{ await api("PATCH","/meta/state", { phase:"open", drawnAt:null }); await api("DELETE","/draw"); S.revealed=null; S.rescue=null; }
     catch(err){ fail(errEl, err); }
     S.busy=false; await load();
+  });
+
+  $("rescueSel").addEventListener("change", function(){ S.rescue=null; $("rescueErr").textContent=""; render(); });
+  $("rHide").addEventListener("click", function(){ S.rescue=null; render(); });
+  $("rescueForm").addEventListener("submit", async function(e){
+    e.preventDefault(); if(S.busy||!S.isAdmin) return;
+    var errEl=$("rescueErr"), p=person($("rescueSel").value); errEl.textContent=""; S.rescue=null;
+    if(!p){ errEl.textContent="Choisissez d'abord le participant."; render(); return; }
+    if(!S.draw._org){ errEl.textContent="Ce tirage a été fait avant l'ajout de cette option. Annulez-le puis relancez-le pour pouvoir dépanner un participant."; render(); return; }
+    if(!S.adminKey){ errEl.textContent="Fermez puis rouvrez l'espace organisateur avec votre code."; render(); return; }
+    S.busy=true;
+    try{
+      var map=JSON.parse(await aesOpen(S.adminKey, S.draw._org));
+      if(map[p.id]) S.rescue={ giver:p.id, to:map[p.id] };
+      else errEl.textContent=p.name+" n'était pas inscrit au moment du tirage.";
+    }catch(_){ errEl.textContent="Le tirage n'a pas pu être déchiffré. Fermez puis rouvrez l'espace organisateur avec votre code."; }
+    S.busy=false; render();
   });
 
   /* ---------- boot ---------- */
