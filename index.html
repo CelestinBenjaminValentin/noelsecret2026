@@ -103,6 +103,10 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .join{display:flex;flex-direction:column;gap:12px;padding-bottom:12px}
 .card.opt{background:rgba(26,18,6,.40);border:1px dashed rgba(236,198,110,.40);box-shadow:none;padding:16px 14px}
 .step-head{display:flex;align-items:baseline;justify-content:space-between;gap:4px 10px;flex-wrap:wrap}
+.hint-text{font-size:1rem;line-height:1.6}
+.hint-text strong{color:var(--pale);font-weight:700}
+.sep{display:flex;align-items:center;gap:10px;font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
 .opt-tag{font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .join > .err{background:var(--surface);border-radius:8px;padding:8px 12px}
 button.submit{width:100%;padding:14px 18px;font-size:1.05rem}
@@ -160,9 +164,10 @@ h3{font-family:var(--display);font-weight:700;font-size:1.08rem;margin:0;color:v
         <p class="muted">Retenez votre code, qui vous permet de revenir compléter vos idées et, après le tirage au sort, de découvrir à qui vous offrirez.</p>
       </div>
       <div class="card opt">
-        <div class="step-head"><span class="num">Étape 2 · Mes idées de cadeaux</span><span class="opt-tag">Facultatif</span></div>
+        <div class="step-head"><span class="num">Étape 2 · Mes idées de cadeaux</span></div>
         <label class="check" for="jOpen"><input type="checkbox" id="jOpen"> Sans idée particulière, tout cadeau me fera plaisir</label>
         <div class="stack" id="jIdeas">
+          <p class="sep">Facultatif</p>
           <div id="joinRows"></div>
           <button type="button" class="quiet add" id="jAdd">+ Je donne une idée de cadeau</button>
         </div>
@@ -246,6 +251,10 @@ h3{font-family:var(--display);font-weight:700;font-size:1.08rem;margin:0;color:v
         </div>
         <button type="button" class="quiet small" id="lockBtn2">Masquer et verrouiller</button>
       </div>
+    </div>
+    <div class="card opt" id="hintCard" hidden>
+      <div class="step-head"><span class="num">Un petit indice</span><span class="opt-tag">Suggestion</span></div>
+      <p class="hint-text">En restant fidèle au Noël Secret, laissez un petit indice avec votre cadeau qui permettra à <strong id="hintName"></strong> de deviner que c'est vous qui le lui avez offert.</p>
     </div>
 
   </section>
@@ -698,6 +707,8 @@ h3{font-family:var(--display);font-weight:700;font-size:1.08rem;margin:0;color:v
     $("drawDone").hidden=!isDrawn;
     $("unlock2").hidden=!!me; $("reveal").hidden=!me;
     $("revealBtn").hidden=!!S.revealed; $("revealBody").hidden=!S.revealed;
+    var hintTo=(me && S.revealed && S.revealed!=="none") ? person(S.revealed) : null; /* only once the result is on screen */
+    $("hintCard").hidden=!hintTo; $("hintName").textContent=hintTo ? hintTo.name : "";
     if(me && S.revealed){
       var to=person(S.revealed), none=S.revealed==="none";
       $("revealLead").textContent=none?"":"Vous offrez un cadeau à";
