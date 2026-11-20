@@ -100,6 +100,12 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 #joinRows,#wishRows{display:flex;flex-direction:column;gap:12px}
 .wish{border-top:1px dashed var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
 .wish:first-of-type{border-top:0;padding-top:0}
+.join{display:flex;flex-direction:column;gap:12px;padding-bottom:12px}
+.card.opt{background:rgba(26,18,6,.40);border:1px dashed rgba(236,198,110,.40);box-shadow:none;padding:16px 14px}
+.step-head{display:flex;align-items:baseline;justify-content:space-between;gap:4px 10px;flex-wrap:wrap}
+.opt-tag{font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.join > .err{background:var(--surface);border-radius:8px;padding:8px 12px}
+button.submit{width:100%;padding:14px 18px;font-size:1.05rem}
 .wish-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 label.check{flex-direction:row;align-items:center;gap:12px;font-weight:500;font-size:.95rem;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer}
 input[type="checkbox"]{width:22px;height:22px;flex:none;margin:0;padding:0;accent-color:var(--accent)}
@@ -140,29 +146,35 @@ h3{font-family:var(--display);font-weight:700;font-size:1.08rem;margin:0;color:v
   <div class="status" id="status" role="status">Chargement des inscriptions…</div>
 
   <section id="v-inscriptions">
-    <form class="card" id="joinForm" novalidate hidden>
-      <h2>Je m'inscris</h2>
-      <p class="muted">Les idées de cadeaux sont facultatives. Si vous en mettez, préférez plusieurs idées pour garder une part de surprise. Une fois le tirage au sort fait, revenez sur la page pour découvrir à qui vous offrirez quelque chose.</p>
-      <span class="num">Étape 1 · Qui êtes-vous ?</span>
-      <label for="joinName">Mon prénom
-        <input id="joinName" maxlength="40" autocomplete="off" placeholder="Camille">
-      </label>
-      <label for="joinPin">Créer mon code secret
-        <input id="joinPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="4 à 8 chiffres">
-      </label>
-      <p class="muted">Retenez votre code, qui vous permet de revenir compléter vos idées et, après le tirage au sort, de découvrir à qui vous offrirez.</p>
-      <span class="num">Étape 2 · Mes idées de cadeaux (facultatif)</span>
-      <label class="check" for="jOpen"><input type="checkbox" id="jOpen"> Sans idée particulière, tout cadeau me fera plaisir</label>
-      <div class="stack" id="jIdeas">
-        <div id="joinRows"></div>
-        <button type="button" class="quiet add" id="jAdd">+ Je donne une idée de cadeau</button>
+    <form class="join" id="joinForm" novalidate hidden>
+      <div class="card">
+        <h2>Je m'inscris</h2>
+        <p class="muted">Les idées de cadeaux sont facultatives. Si vous en mettez, préférez plusieurs idées pour garder une part de surprise. Une fois le tirage au sort fait, revenez sur la page pour découvrir à qui vous offrirez quelque chose.</p>
+        <span class="num">Étape 1 · Qui êtes-vous ?</span>
+        <label for="joinName">Mon prénom
+          <input id="joinName" maxlength="40" autocomplete="off" placeholder="Camille">
+        </label>
+        <label for="joinPin">Créer mon code secret
+          <input id="joinPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="4 à 8 chiffres">
+        </label>
+        <p class="muted">Retenez votre code, qui vous permet de revenir compléter vos idées et, après le tirage au sort, de découvrir à qui vous offrirez.</p>
       </div>
-      <span class="num">Étape 3 · Un mot en plus</span>
-      <label for="joinNote">Commentaire libre (facultatif)
-        <textarea id="joinNote" maxlength="300" placeholder="Mes goûts, ma taille, ce que j'ai déjà, ce qu'il vaut mieux éviter…"></textarea>
-      </label>
-      <p class="err" id="joinErr"></p>
-      <div class="row"><button type="submit" id="joinBtn">Je m'inscris</button></div>
+      <div class="card opt">
+        <div class="step-head"><span class="num">Étape 2 · Mes idées de cadeaux</span><span class="opt-tag">Facultatif</span></div>
+        <label class="check" for="jOpen"><input type="checkbox" id="jOpen"> Sans idée particulière, tout cadeau me fera plaisir</label>
+        <div class="stack" id="jIdeas">
+          <div id="joinRows"></div>
+          <button type="button" class="quiet add" id="jAdd">+ Je donne une idée de cadeau</button>
+        </div>
+      </div>
+      <div class="card opt">
+        <div class="step-head"><span class="num">Étape 3 · Un mot en plus</span><span class="opt-tag">Facultatif</span></div>
+        <label for="joinNote">Commentaire libre
+          <textarea id="joinNote" maxlength="300" placeholder="Mes goûts, ma taille, ce que j'ai déjà, ce qu'il vaut mieux éviter…"></textarea>
+        </label>
+      </div>
+      <p class="err" id="joinErr" role="alert"></p>
+      <button type="submit" class="submit" id="joinBtn">Je m'inscris</button>
     </form>
     <div class="card" id="closedCard" hidden>
       <h2>Inscriptions closes</h2>
